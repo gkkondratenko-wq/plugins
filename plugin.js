@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    var API = 'http://localhost:3000/api';
+    var API = 'http://192.168.1.2:3000/api';
 
     function startPlugin() {
         Lampa.Noty.show('Мой плагин запущен');
