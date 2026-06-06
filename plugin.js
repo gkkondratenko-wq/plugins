@@ -1,86 +1,84 @@
 (function () {
     'use strict';
 
-    const API = 'http://localhost:3000/api';
+    var API = 'http://localhost:3000/api';
 
-    Lampa.Plugins.add('my_server_plugin', function () {
+    function startPlugin() {
+        Lampa.Noty.show('Мой плагин запущен');
 
-        function start() {
+        setTimeout(function () {
             openSearch();
-        }
+        }, 1000);
+    }
 
-        function openSearch() {
+    function openSearch() {
+        Lampa.Input.edit({
+            title: 'Поиск фильма',
+            free: true
+        }, function (q) {
+            if (!q) return;
+            search(q);
+        });
+    }
 
-            Lampa.Input.edit({
-                title: 'Поиск фильма',
-                free: true
-            }, function (q) {
+    function search(q) {
+        Lampa.Load.show();
 
-                if (!q) return;
+        fetch(API + '/search?q=' + encodeURIComponent(q))
+            .then(function (r) {
+                return r.json();
+            })
+            .then(function (data) {
+                Lampa.Load.hide();
 
-                search(q);
-            });
-        }
+                var list = [];
 
-        function search(q) {
-
-            Lampa.Load.show();
-
-            fetch(API + '/search?q=' + encodeURIComponent(q))
-                .then(r => r.json())
-                .then(data => {
-
-                    Lampa.Load.hide();
-                    showResults(data.results);
+                data.results.forEach(function (item) {
+                    list.push({
+                        title: item.title,
+                        description: item.year + '',
+                        onSelect: function () {
+                            openItem(item);
+                        }
+                    });
                 });
-        }
 
-        function showResults(items) {
-
-            let list = items.map(item => ({
-                title: item.title,
-                description: item.year,
-                onSelect: function () {
-                    openItem(item);
-                }
-            }));
-
-            Lampa.Select.show({
-                title: 'Результаты',
-                items: list
-            });
-        }
-
-        function openItem(item) {
-
-            fetch(API + '/item?id=' + item.id)
-                .then(r => r.json())
-                .then(data => {
-
-                    showSources(data.sources);
+                Lampa.Select.show({
+                    title: 'Результаты',
+                    items: list
                 });
-        }
-
-        function showSources(sources) {
-
-            let list = sources.map(src => ({
-                title: src.name,
-                description: src.quality,
-                onSelect: function () {
-                    Lampa.Platform.openUrl(src.url);
-                }
-            }));
-
-            Lampa.Select.show({
-                title: 'Источники',
-                items: list
+            })
+            .catch(function () {
+                Lampa.Load.hide();
+                Lampa.Noty.show('Ошибка подключения к серверу');
             });
-        }
+    }
 
-        return {
-            start: start,
-            destroy: function () {}
-        };
-    });
+    function openItem(item) {
+        fetch(API + '/item?id=' + item.id)
+            .then(function (r) {
+                return r.json();
+            })
+            .then(function (data) {
+                var list = [];
+
+                data.sources.forEach(function (src) {
+                    list.push({
+                        title: src.name,
+                        description: src.quality,
+                        onSelect: function () {
+                            Lampa.Platform.openUrl(src.url);
+                        }
+                    });
+                });
+
+                Lampa.Select.show({
+                    title: 'Источники',
+                    items: list
+                });
+            });
+    }
+
+    startPlugin();
 
 })();
